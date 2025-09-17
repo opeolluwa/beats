@@ -1,12 +1,12 @@
 import {createMemoryHistory, createRouter} from 'vue-router'
-
-import DefaultScreen from '../views/defaultScreen.vue'
 import UploadScreen from "../views/uploadScreen.vue";
 import ProgressScreen from "../views/progressScreen.vue";
+// import WaitingForConnection from "../views/waitingForConnection.vue";
 
 const routes = [
-    {path: '/', component: DefaultScreen},
-    {path: '/upload', component: UploadScreen},
+    // {path: '/', component: WaitingForConnection},
+    {path: '/', component: UploadScreen},
+    {path: '/progress', component: ProgressScreen},
     {path: '/progress', component: ProgressScreen},
 
 ]

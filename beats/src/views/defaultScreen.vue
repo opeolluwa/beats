@@ -3,8 +3,11 @@
 </script>
 
 <template>
-    Lorem ipsum dolor sit amet, consectetur adipisicing elit. Quasi cum incidunt culpa quaerat explicabo? Fuga tempore atque molestiae at obcaecati veniam molestias nobis nostrum repudiandae incidunt, reprehenderit accusamus beatae dolorem.
-
+  <div class="flex flex-col items-center align-center justify-center  h-screen">
+    <h1 class="text-2xl">
+      What would you like to do?
+    </h1>
+  </div>
 </template>
 
 <style scoped>

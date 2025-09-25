@@ -1,6 +1,6 @@
 package com.filesync.app
 
-import MainScreen
+import com.filesync.app.screens.MainScreen
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -24,19 +24,9 @@ import com.journeyapps.barcodescanner.ScanOptions
 class MainActivity : ComponentActivity() {
 
     private lateinit var apManager: APManager
-    private val qrScanResult = mutableStateOf("")
     private val wifiSsid = mutableStateOf("")
     private val wifiPassword = mutableStateOf("")
 
-
-    // QR Code Scanner Launcher
-    private val qrCodeLauncher = registerForActivityResult(ScanContract()) { result ->
-        if (result.contents == null) {
-            Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
-        } else {
-            qrScanResult.value = result.contents
-        }
-    }
 
     // Location Permission Request
     private val locationPermissionRequest = registerForActivityResult(
@@ -65,8 +55,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             FileSyncAndroidTheme {
                 MainScreen(
-                    qrResult = qrScanResult.value,
-                    onScanClick = { checkCameraPermission(this) },
                     wifiSsid = wifiSsid.value,
                     wifiPassword = wifiPassword.value
                 )
@@ -74,24 +62,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun checkCameraPermission(context: Context) {
-        when {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                    PackageManager.PERMISSION_GRANTED -> launchQrScanner()
-
-            shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
-                Toast.makeText(
-                    this,
-                    "Camera permission is needed to scan QR codes",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-
-            else -> {
-                requestPermissions(arrayOf(Manifest.permission.CAMERA), 100)
-            }
-        }
-    }
 
     private val storagePermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -141,16 +111,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun launchQrScanner() {
-        val options = ScanOptions().apply {
-            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-            setPrompt("Scan QR code")
-            setCameraId(0)
-            setBeepEnabled(false)
-            setOrientationLocked(false)
-        }
-        qrCodeLauncher.launch(options)
-    }
 
     private fun turnOnHotspot() {
         apManager.turnOnHotspot(

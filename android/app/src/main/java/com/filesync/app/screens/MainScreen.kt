@@ -1,14 +1,16 @@
+package com.filesync.app.screens
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -22,7 +24,7 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(qrResult: String, onScanClick: () -> Unit, wifiSsid: String, wifiPassword: String) {
+fun MainScreen(wifiSsid: String, wifiPassword: String) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()
     val showSheet = remember { mutableStateOf(true) }
@@ -48,9 +50,8 @@ fun MainScreen(qrResult: String, onScanClick: () -> Unit, wifiSsid: String, wifi
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Column(modifier = Modifier) {
-                    Text(text = "SSID: $wifiSsid", fontSize = 16.sp )
+                    Text(text = "SSID: $wifiSsid", fontSize = 16.sp)
                     Text(text = "Password: $wifiPassword", fontSize = 16.sp)
-
                 }
                 Spacer(modifier = Modifier.height(24.dp))
                 Button(
@@ -71,13 +72,13 @@ fun MainScreen(qrResult: String, onScanClick: () -> Unit, wifiSsid: String, wifi
                         .padding(top = 12.dp)
                         .height(48.dp)
                 ) {
-
                     Text("Dismiss")
-//                    Image(
-//                        painter = painterResource(id = R.drawable.qr_code),
-//                        contentDescription = "QR Code Icon",
-//                        modifier = Modifier.size(24.dp)
-//                    )
+                    // Uncomment if you want an icon:
+                    // Image(
+                    //     painter = painterResource(id = R.drawable.qr_code),
+                    //     contentDescription = "QR Code Icon",
+                    //     modifier = Modifier.size(24.dp)
+                    // )
                 }
             }
         }
@@ -120,28 +121,6 @@ fun MainScreen(qrResult: String, onScanClick: () -> Unit, wifiSsid: String, wifi
                         fontWeight = FontWeight.Medium,
                         textAlign = TextAlign.Center
                     )
-
-                    Button(
-                        onClick = onScanClick,
-                        shape = RoundedCornerShape(5.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Accent,
-                            contentColor = Color.White
-                        ),
-                        border = BorderStroke(1.dp, Accent),
-                        modifier = Modifier
-                            .fillMaxWidth(0.7f)
-                            .padding(top = 12.dp)
-                            .height(48.dp)
-                            .shadow(8.dp, RoundedCornerShape(50), clip = false)
-                    ) {
-                        Text("Scan QR code", fontSize = 14.sp)
-                        Image(
-                            painter = painterResource(id = R.drawable.qr_code),
-                            contentDescription = "QR Code Icon",
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
                 }
             }
         }

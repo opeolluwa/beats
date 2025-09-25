@@ -8,11 +8,13 @@ const value = ref(null)
   <div class="flex flex-col items-center align-center justify-center  h-screen">
     <NuxtFileUpload
         :ui="{
-      base: 'min-h-64 w-96'
+      base: 'border-none hover:bg-unset dark:text-white bg-transparent',
+      label:'text-2xl leading-16 -mb-4',
+      icon:'size-8'
     }"
-        class="w-96"
-        description="SVG, PNG, JPG or GIF (max. 2MB)"
-        label="Drop your images here"
+        class=" h-screen w-screen text-white"
+        description=".pdf, .mp3, .mp4. .jpeg, ..."
+        label="Drop your files or folder here"
         layout="list"
         multiple
         position="inside"

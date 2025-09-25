@@ -5,7 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="33934298-5833-4da1-b37e-0e2bec43d847" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/Cargo.toml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/Justfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/src/config.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/src/errors.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/src/lib.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/src/no-tls.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/src/router.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/src/routes.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/src/server.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/beats/src-tauri/server/src/state.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/beats/src-tauri/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/beats/src-tauri/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/beats/src-tauri/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/beats/src-tauri/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/beats/src-tauri/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/beats/src-tauri/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/beats/src/views/uploadScreen.vue" beforeDir="false" afterPath="$PROJECT_DIR$/beats/src/views/uploadScreen.vue" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -14,6 +30,15 @@
   </component>
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="CSS File" />
+        <option value="TypeScript File" />
+        <option value="Vue Composition API Component" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -24,12 +49,12 @@
     &quot;assignee&quot;: &quot;opeolluwa&quot;
   }
 }</component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/opeolluwa/beats",
-    "accountId": "d5809a53-f73d-4093-a91f-3012e10a392f"
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/opeolluwa/beats&quot;,
+    &quot;accountId&quot;: &quot;d5809a53-f73d-4093-a91f-3012e10a392f&quot;
   }
-}]]></component>
+}</component>
   <component name="GoLibraries">
     <option name="indexEntireGoPath" value="true" />
   </component>
@@ -70,7 +95,8 @@
     "git-widget-placeholder": "reimagine",
     "go.import.settings.migrated": "true",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/USER/Desktop/devs/filesync",
+    "last_opened_file_path": "/Users/USER/Desktop/projects/beats/beats/src-tauri",
+    "list.type.of.created.stylesheet": "CSS",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -88,7 +114,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/beats/src-tauri" />
       <recent name="$PROJECT_DIR$/src" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/beats/src-tauri/server/src" />
     </key>
   </component>
   <component name="RunManager">
@@ -124,6 +154,9 @@
       <workItem from="1744356677179" duration="180000" />
       <workItem from="1744356882813" duration="671000" />
       <workItem from="1757899064929" duration="1222000" />
+      <workItem from="1758135718525" duration="1335000" />
+      <workItem from="1758140210528" duration="3999000" />
+      <workItem from="1758837865764" duration="2709000" />
     </task>
     <servers />
   </component>

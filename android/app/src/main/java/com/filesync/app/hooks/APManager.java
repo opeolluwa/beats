@@ -127,19 +127,17 @@ public class APManager {
                 onFailureListener.onFailure(ERROR_LOCATION_PERMISSION_DENIED,null);
             }
         } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (!utils.checkLocationPermission(context)) {
-                    onFailureListener.onFailure(ERROR_LOCATION_PERMISSION_DENIED,null);
-                    return;
-                }
-                if (!utils.checkWriteSettingPermission(context)) {
-                    onFailureListener.onFailure(ERROR_WRITE_SETTINGS_PERMISSION_REQUIRED,null);
-                    return;
-                }
+            if (!utils.checkLocationPermission(context)) {
+                onFailureListener.onFailure(ERROR_LOCATION_PERMISSION_DENIED, null);
+                return;
+            }
+            if (!utils.checkWriteSettingPermission(context)) {
+                onFailureListener.onFailure(ERROR_WRITE_SETTINGS_PERMISSION_REQUIRED,null);
+                return;
             }
             try {
                 ssid = "AndroidAP_" + new Random().nextInt(10000);
-                password = getRandomPassword();
+                password = String.valueOf(new Random().nextInt(999999));
                 WifiConfiguration wifiConfiguration = new WifiConfiguration();
                 wifiConfiguration.SSID = ssid;
                 wifiConfiguration.preSharedKey = password;

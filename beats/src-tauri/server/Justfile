@@ -1,0 +1,10 @@
+keychain: 
+    mkdir -p certificates
+    openssl req -x509 -newkey rsa:4096 -keyout certificates/key.pem -out certificates/cert.pem -days 365 -nodes \
+    -subj "/CN=localhost"
+
+    # openssl req -x509 -newkey rsa:4096 -days 365 -keyout certificates/key.pem -out certificates/cert.pem
+
+
+test-build:
+    cargo build --manifest-path Cargo.toml

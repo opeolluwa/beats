@@ -8,3 +8,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 String greet({required String name}) =>
     RustLib.instance.api.crateApiSimpleGreet(name: name);
+
+String hello({required String a}) =>
+    RustLib.instance.api.crateApiSimpleHello(a: a);

@@ -7,7 +7,8 @@
     "fullscreen",
     "leptos",
     "qrcode",
-    "tauri"
+    "tauri",
+    "warbeats"
   ],
   "java.configuration.updateBuildConfiguration": "interactive"
 }

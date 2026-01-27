@@ -1,7 +1,7 @@
 # FIleSync: WiFi File Sharing Application
 
 FileSync is a file-sharing application, targeting Linux, Mac, Windows and
-Android platforms 
+Android platforms
 ![screenshot](./screenshots/filesync-0.7.16.png)
 
 <!-- <img src="/screenshots/mobile.png"/> -->
@@ -10,7 +10,7 @@ Android platforms
 
 _⚠️ The application is still a work in progress_
 To proceed with the preview anyway, see the
-[release page](https://github.com/opeolluwa/filesync/releases)_
+[release page](https://github.com/opeolluwa/filesync/releases)\_
 
 ## Getting Started
 
@@ -48,11 +48,11 @@ To see all available commands
 
 ## Roadmap
 
-- [x] Adaptive UI 
-- [x] Build an executable for the Mac operating system 
-- [x] Build an executable for the Linux Operating system 
-- [x] Build an executable for Window 
-- [ ] Support mobile devices 
+- [x] Adaptive UI
+- [x] Build an executable for the Mac operating system
+- [x] Build an executable for the Linux Operating system
+- [x] Build an executable for Window
+- [ ] Support mobile devices
 - [ ] Support dark mode
 - [ ] Add walkthrough after installation
 
@@ -68,6 +68,10 @@ Contributions are always welcome!
 See [contributing.md](./CONTRIBUTING.md) for ways to get started.
 
 Please adhere to this project's [code of conduct](CODE_OF_CONDUCT.md).
+
+## Help
+
+- [Flutter Rust Bridge](https://cjycode.com/flutter_rust_bridge/quickstart)
 
 ## License
 

@@ -49,8 +49,8 @@ impl Discovery {
         let receiver = self.daemon.browse(SERVICE_TYPE)?;
         let peers = Arc::clone(&self.peers);
 
-        tokio::spawn(async move {
-            while let Ok(event) = receiver.recv_async().await {
+        std::thread::spawn(move || {
+            while let Ok(event) = receiver.recv() {
                 match event {
                     ServiceEvent::ServiceResolved(info) => {
                         if let Some(addr) = info.get_addresses().iter().next() {

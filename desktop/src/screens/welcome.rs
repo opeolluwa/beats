@@ -44,11 +44,11 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
 }
 
 async fn call_greet(name: &str) -> String {
-    shared::cmd::greet(&name).await
+    kernel::cmd::greet(&name).await
 }
 
-use shared::cmd;
-use shared::config::EmbeddedServerConfig;
+use kernel::cmd;
+use kernel::config::EmbeddedServerConfig;
 
 pub async fn cmd_extract_connection() -> EmbeddedServerConfig {
     cmd::extract_connection().await

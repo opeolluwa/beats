@@ -1,10 +1,10 @@
 [package]
-name = "filesync-ui"
+name = "beats-ui"
 version = "0.5.0"
 edition = "2021"
 
 [workspace]
-members = ["src-tauri", "server", "shared"]
+members = ["src-tauri", "network", "kernel"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
@@ -21,7 +21,7 @@ thaw = { workspace = true, features = ["csr"] }
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 web-sys = { workspace = true }
-shared.workspace = true
+kernel.workspace = true
 
 
 [workspace.dependencies]
@@ -43,6 +43,6 @@ leptos-use = "0.13.11"
 leptos_toaster = "0.1.7"
 web-sys = "0.3.77"
 leptos-qr = { git = "https://github.com/opeolluwa/leptos-qr", version = "0.2.0" }
-embedded_server = { path = "server" }
+network = { path = "network" }
 thiserror = "2.0.12"
-shared = { path = "shared" }
+kernel = { path = "kernel" }

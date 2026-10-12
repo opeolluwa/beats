@@ -1,7 +1,6 @@
 package com.beats.app
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -20,31 +19,19 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.beats.app.hooks.APManager
 import com.beats.app.network.ConnectionStatus
-import com.beats.app.network.DiscoveredPeer
-import com.beats.app.network.ServerConnection
 import com.beats.app.network.ServiceDiscovery
 import com.beats.app.screens.MainScreen
 import com.beats.app.ui.theme.BeatsTheme
 import com.beats.app.viewmodel.TransferViewModel
-import com.journeyapps.barcodescanner.ScanContract
-import com.journeyapps.barcodescanner.ScanOptions
-import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var apManager: APManager
     private lateinit var serviceDiscovery: ServiceDiscovery
-    private val wifiSsid = mutableStateOf("")
-    private val wifiPassword = mutableStateOf("")
     private val selectedFileUris = mutableStateOf<List<Uri>>(emptyList())
-
-    private val qrCodeLauncher = registerForActivityResult(ScanContract()) { result ->
-        if (result.contents == null) {
-            Toast.makeText(this, "Scan cancelled", Toast.LENGTH_SHORT).show()
-        } else {
-            handleQrResult(result.contents)
-        }
-    }
+    private val isBroadcasting = mutableStateOf(false)
+    private val hotspotSsid = mutableStateOf("")
+    private val hotspotPassword = mutableStateOf("")
 
     private val filePickerLauncher = registerForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -60,9 +47,7 @@ class MainActivity : ComponentActivity() {
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
-        if (isGranted) {
-            checkWriteSettingsPermission()
-        } else {
+        if (!isGranted) {
             Toast.makeText(this, "Location permission is required", Toast.LENGTH_SHORT).show()
         }
     }
@@ -79,13 +64,8 @@ class MainActivity : ComponentActivity() {
             != PackageManager.PERMISSION_GRANTED
         ) {
             locationPermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        } else {
-            checkWriteSettingsPermission()
         }
         checkFileAccessPermission()
-
-        serviceDiscovery.register(18005)
-        serviceDiscovery.startDiscovery()
 
         setContent {
             BeatsTheme {
@@ -112,8 +92,13 @@ class MainActivity : ComponentActivity() {
                     uploads = uploads,
                     downloads = downloads,
                     isSending = isSending,
+                    isBroadcasting = isBroadcasting.value,
+                    hotspotSsid = hotspotSsid.value,
+                    hotspotPassword = hotspotPassword.value,
                     onPeerClick = { peer -> vm.connectToPeer(peer) },
-                    onScanClick = { checkCameraPermission(this@MainActivity) },
+                    onBroadcastClick = { startBroadcast() },
+                    onJoinClick = { joinNetwork() },
+                    onRefreshClick = { refreshDiscovery() },
                     onSelectFiles = { filePickerLauncher.launch(arrayOf("*/*")) },
                     onSend = {
                         if (pendingUris.isNotEmpty()) {
@@ -121,9 +106,7 @@ class MainActivity : ComponentActivity() {
                             selectedFileUris.value = emptyList()
                         }
                     },
-                    onDisconnect = { vm.disconnect() },
-                    wifiSsid = wifiSsid.value,
-                    wifiPassword = wifiPassword.value
+                    onDisconnect = { vm.disconnect() }
                 )
             }
         }
@@ -134,35 +117,48 @@ class MainActivity : ComponentActivity() {
         serviceDiscovery.stop()
     }
 
-    private fun handleQrResult(contents: String) {
-        try {
-            val json = JSONObject(contents)
-            val ip = json.getString("ip")
-            val port = json.getInt("port")
-            val peer = DiscoveredPeer(name = "Desktop", ip = ip, port = port)
-            viewModelRef?.connectToPeer(peer)
-        } catch (e: Exception) {
-            Toast.makeText(this, "Invalid QR code", Toast.LENGTH_SHORT).show()
-        }
+    private fun refreshDiscovery() {
+        serviceDiscovery.stop()
+        serviceDiscovery.register(18005)
+        serviceDiscovery.startDiscovery()
+        Toast.makeText(this, "Refreshing...", Toast.LENGTH_SHORT).show()
     }
 
-    private fun checkCameraPermission(context: Context) {
-        when {
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
-                    PackageManager.PERMISSION_GRANTED -> launchQrScanner()
-
-            shouldShowRequestPermissionRationale(Manifest.permission.CAMERA) -> {
-                Toast.makeText(
-                    this,
-                    "Camera permission is needed to scan QR codes",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-
-            else -> {
-                requestPermissions(arrayOf(Manifest.permission.CAMERA), 100)
-            }
+    private fun joinNetwork() {
+        if (!apManager.isDeviceConnectedToWifi) {
+            Toast.makeText(this, "Connect to a WiFi network first", Toast.LENGTH_LONG).show()
+            startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+            return
         }
+
+        isBroadcasting.value = true
+        serviceDiscovery.register(18005)
+        serviceDiscovery.startDiscovery()
+    }
+
+    private fun startBroadcast() {
+        if (apManager.isDeviceConnectedToWifi) {
+            val wifiManager = apManager.wifiManager
+            @Suppress("DEPRECATION")
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+                wifiManager.isWifiEnabled = false
+                Toast.makeText(this, "Turning off WiFi...", Toast.LENGTH_SHORT).show()
+                android.os.Handler(mainLooper).postDelayed({ startBroadcast() }, 1500)
+            } else {
+                Toast.makeText(this, "Please turn off WiFi to broadcast", Toast.LENGTH_LONG).show()
+                startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+            }
+            return
+        }
+
+        if (apManager.isWifiApEnabled) {
+            apManager.disableWifiAp()
+            Toast.makeText(this, "Turning off existing hotspot...", Toast.LENGTH_SHORT).show()
+            android.os.Handler(mainLooper).postDelayed({ startBroadcast() }, 1500)
+            return
+        }
+
+        turnOnHotspot()
     }
 
     private val storagePermissionRequest = registerForActivityResult(
@@ -196,35 +192,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun checkWriteSettingsPermission() {
-        if (!Settings.System.canWrite(this)) {
-            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
-                data = Uri.parse("package:$packageName")
-            }
-            startActivity(intent)
-        } else {
-            turnOnHotspot()
-        }
-    }
-
-    private fun launchQrScanner() {
-        val options = ScanOptions().apply {
-            setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-            setPrompt("Scan QR code")
-            setCameraId(0)
-            setBeepEnabled(false)
-            setOrientationLocked(false)
-        }
-        qrCodeLauncher.launch(options)
-    }
-
     private fun turnOnHotspot() {
         apManager.turnOnHotspot(
             this,
             { ssid, password ->
                 Log.d("Hotspot", "SSID: $ssid, Password: $password")
-                wifiSsid.value = ssid
-                wifiPassword.value = password
+                hotspotSsid.value = ssid
+                hotspotPassword.value = password
+                isBroadcasting.value = true
+                serviceDiscovery.register(18005)
+                serviceDiscovery.startDiscovery()
             }
         ) { failureCode, e ->
             val message = when (failureCode) {

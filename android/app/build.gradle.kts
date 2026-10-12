@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.filesync.app"
+    namespace = "com.beats.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.filesync.app"
+        applicationId = "com.beats.app"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
@@ -52,6 +52,9 @@ android {
 dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.4.1 ")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("com.github.bumptech.glide:glide:4.16.0")
     implementation(libs.androidx.core.ktx)

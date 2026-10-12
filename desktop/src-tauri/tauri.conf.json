@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "filesync",
+  "productName": "beats",
   "version": "0.7.16",
-  "identifier": "com.filesync.app",
+  "identifier": "com.beats.app",
   "build": {
     "beforeDevCommand": "trunk serve",
     "devUrl": "http://localhost:1420",
@@ -14,7 +14,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "Filesync",
+        "title": "Beats",
         "width": 750,
         "height": 600
       }

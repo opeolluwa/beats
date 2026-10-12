@@ -1,0 +1,17 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+local-ip-address = "0.6.5"
+serde = { workspace = true, features = ["derive"] }
+tauri-interop = { version = "2.2.2" }
+
+# host target
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tauri = { workspace = true }
+
+#wasm target
+[target.'cfg(target_family = "wasm")'.dependencies]
+

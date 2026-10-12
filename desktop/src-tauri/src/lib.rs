@@ -3,10 +3,11 @@ mod commands;
 mod database;
 mod error;
 mod utils;
-use embedded_server::server::EmbeddedHttpServer;
+use network::discovery::Discovery;
+use network::server::EmbeddedHttpServer;
 use local_ip_address::local_ip;
-use shared::config::EmbeddedServerConfig;
-use shared::state::AppState;
+use kernel::config::{EmbeddedServerConfig, HTTP_PORT};
+use kernel::state::AppState;
 use std::{
     net::{IpAddr, Ipv4Addr},
     sync::Arc,
@@ -30,6 +31,16 @@ pub fn run() {
     };
 
     tauri::async_runtime::spawn(EmbeddedHttpServer::run(Arc::new(local_ip)));
+
+    let hostname = hostname::get()
+        .map(|h| h.to_string_lossy().to_string())
+        .unwrap_or_else(|_| "beats-desktop".to_string());
+    if let Ok(discovery) = Discovery::new() {
+        let _ = discovery.register(&hostname, local_ip, HTTP_PORT as u16);
+        let _ = discovery.browse();
+        std::mem::forget(discovery);
+    }
+
     tauri::Builder::default()
         .setup(move |app| {
             app.manage(app_state);
@@ -37,12 +48,12 @@ pub fn run() {
         })
         .plugin(
             tauri_plugin_sql::Builder::default()
-                .add_migrations("sqlite:filesync.db", migrations)
+                .add_migrations("sqlite:beats.db", migrations)
                 .build(),
         )
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_shell::init())
-        .invoke_handler(shared::cmd::get_handlers())
+        .invoke_handler(kernel::cmd::get_handlers())
         // .invoke_handler(tauri::generate_handler![])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

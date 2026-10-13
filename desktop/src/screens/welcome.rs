@@ -76,7 +76,9 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
     let (peers, set_peers) = signal(Vec::<String>::new());
     let (uploading, set_uploading) = signal(false);
     let (upload_msg, set_upload_msg) = signal(String::new());
+    let (upload_ok, set_upload_ok) = signal(false);
     let (drag_over, set_drag_over) = signal(false);
+    let (file_count, set_file_count) = signal(0u32);
 
     // Initial fetch
     wasm_bindgen_futures::spawn_local(async move {
@@ -98,8 +100,11 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
     .ok();
 
     let handle_files = move |file_list: web_sys::FileList| {
+        let count = file_list.length();
+        set_file_count.set(count);
         set_uploading.set(true);
         set_upload_msg.set(String::new());
+        set_upload_ok.set(false);
 
         wasm_bindgen_futures::spawn_local(async move {
             let form_data = FormData::new().unwrap();
@@ -110,10 +115,11 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
             }
             let ok = upload_files(form_data).await;
             set_uploading.set(false);
+            set_upload_ok.set(ok);
             if ok {
                 set_upload_msg.set("Files staged for transfer".to_string());
             } else {
-                set_upload_msg.set("Upload failed".to_string());
+                set_upload_msg.set("Upload failed — check connection".to_string());
             }
         });
     };
@@ -151,18 +157,199 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
     let has_peers = move || !peers.get().is_empty();
 
     view! {
+        <style>
+            "
+            .drop-container {
+                position: relative;
+                width: 100%;
+                max-width: 520px;
+                aspect-ratio: 4 / 3;
+                border-radius: 16px;
+                border: 1.5px dashed var(--drop-border, rgba(140, 140, 160, 0.25));
+                background: var(--drop-bg, rgba(140, 140, 160, 0.03));
+                transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+
+            .drop-container:hover {
+                border-color: rgba(140, 140, 160, 0.4);
+                background: rgba(140, 140, 160, 0.05);
+            }
+
+            .drop-container.dragging {
+                border-color: var(--color-app, #6366f1);
+                border-style: solid;
+                background: rgba(99, 102, 241, 0.06);
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+                transform: scale(1.01);
+            }
+
+            .drop-container .drop-input {
+                position: absolute;
+                inset: 0;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+            .drop-icon {
+                width: 48px;
+                height: 48px;
+                margin-bottom: 16px;
+                opacity: 0.3;
+                transition: opacity 0.2s, transform 0.2s;
+            }
+
+            .drop-container:hover .drop-icon,
+            .drop-container.dragging .drop-icon {
+                opacity: 0.5;
+                transform: translateY(-2px);
+            }
+
+            .drop-label {
+                font-size: 15px;
+                font-weight: 500;
+                color: var(--text-secondary, #6b7280);
+                margin-bottom: 4px;
+            }
+
+            .drop-hint {
+                font-size: 13px;
+                color: var(--text-tertiary, #9ca3af);
+            }
+
+            .drop-container.dragging .drop-label {
+                color: var(--color-app, #6366f1);
+            }
+
+            /* Peer pills */
+            .peer-bar {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                margin-top: 20px;
+                flex-wrap: wrap;
+            }
+
+            .peer-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 12px 5px 10px;
+                border-radius: 100px;
+                background: rgba(16, 185, 129, 0.08);
+                border: 1px solid rgba(16, 185, 129, 0.15);
+                font-size: 12px;
+                font-weight: 500;
+                color: #10b981;
+                letter-spacing: 0.01em;
+            }
+
+            .peer-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #10b981;
+                animation: peer-pulse 2s ease-in-out infinite;
+            }
+
+            @keyframes peer-pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.4; }
+            }
+
+            /* Upload spinner */
+            .upload-spinner {
+                width: 32px;
+                height: 32px;
+                border: 2.5px solid rgba(140, 140, 160, 0.15);
+                border-top-color: var(--color-app, #6366f1);
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+                margin-bottom: 14px;
+            }
+
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+
+            .upload-status {
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--text-secondary, #6b7280);
+            }
+
+            /* Toast */
+            .upload-toast {
+                margin-top: 14px;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 500;
+                animation: toast-in 0.25s ease-out;
+            }
+
+            .upload-toast.success {
+                background: rgba(16, 185, 129, 0.08);
+                border: 1px solid rgba(16, 185, 129, 0.15);
+                color: #10b981;
+            }
+
+            .upload-toast.error {
+                background: rgba(239, 68, 68, 0.08);
+                border: 1px solid rgba(239, 68, 68, 0.15);
+                color: #ef4444;
+            }
+
+            @keyframes toast-in {
+                from { opacity: 0; transform: translateY(4px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            /* Waiting state */
+            .waiting-container {
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .waiting-label {
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--text-tertiary, #9ca3af);
+                margin-top: 6px;
+            }
+
+            /* Dark mode overrides */
+            @media (prefers-color-scheme: dark) {
+                .drop-container {
+                    --drop-border: rgba(160, 160, 180, 0.12);
+                    --drop-bg: rgba(160, 160, 180, 0.03);
+                }
+                .drop-container:hover {
+                    border-color: rgba(160, 160, 180, 0.22);
+                    background: rgba(160, 160, 180, 0.05);
+                }
+                .drop-label { color: #a1a1aa; }
+                .drop-hint { color: #71717a; }
+            }
+            "
+        </style>
+
         <div class="flex flex-col items-center justify-center h-[90%]">
             <Show
                 when=has_peers
                 fallback=move || {
                     view! {
-                        <div class="text-center flex flex-col align-center justify-center items-center">
-                            <div class="block mx-auto mb-2">
-                                <PulsingCirclesAnimation />
-                            </div>
-                            <h6 class="font-medium leading-2 text-gray-700 dark:text-gray-400 mt-1 mb-5">
-                                "Waiting for peer connections"
-                            </h6>
+                        <div class="waiting-container">
+                            <PulsingCirclesAnimation />
+                            <p class="waiting-label">"Looking for nearby devices"</p>
                         </div>
                     }
                 }
@@ -170,28 +357,28 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                 <div
                     class=move || {
                         if drag_over.get() {
-                            "dropzone dropzone-full dropzone-active"
+                            "drop-container dragging"
                         } else {
-                            "dropzone dropzone-full"
+                            "drop-container"
                         }
                     }
                     on:drop=on_drop
                     on:dragover=on_drag_over
                     on:dragleave=on_drag_leave
                 >
-                    <div class="flex flex-col items-center justify-center">
+                    <div class="flex flex-col items-center justify-center pointer-events-none select-none">
                         <Show
                             when=move || uploading.get()
                             fallback=move || {
                                 view! {
-                                    <div class="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
+                                    <div class="flex flex-col items-center justify-center">
                                         <svg
+                                            class="drop-icon"
                                             xmlns="http://www.w3.org/2000/svg"
                                             fill="none"
                                             viewBox="0 0 24 24"
                                             stroke-width="1.5"
                                             stroke="currentColor"
-                                            class="size-6 mb-3"
                                         >
                                             <path
                                                 stroke-linecap="round"
@@ -199,25 +386,24 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                                                 d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
                                             />
                                         </svg>
-                                        <p class="text-sm text-gray-500 dark:text-gray-400">"Drop files here or click to browse"</p>
-                                        <p class="text-xs text-gray-400 dark:text-gray-500 mt-2">
-                                            "Connected to "
-                                            {move || {
-                                                let p = peers.get();
-                                                if p.len() == 1 {
-                                                    p[0].clone()
-                                                } else {
-                                                    format!("{} devices", p.len())
-                                                }
-                                            }}
-                                        </p>
+                                        <p class="drop-label">"Drop files here"</p>
+                                        <p class="drop-hint">"or click to browse"</p>
                                     </div>
                                 }
                             }
                         >
-                            <div class="flex flex-col items-center justify-center text-gray-400">
-                                <div class="loader"></div>
-                                <p class="mt-4 text-sm">"Uploading..."</p>
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="upload-spinner"></div>
+                                <p class="upload-status">
+                                    {move || {
+                                        let c = file_count.get();
+                                        if c == 1 {
+                                            "Sending 1 file\u{2026}".to_string()
+                                        } else {
+                                            format!("Sending {} files\u{2026}", c)
+                                        }
+                                    }}
+                                </p>
                             </div>
                         </Show>
                     </div>
@@ -225,14 +411,39 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                     <input
                         type="file"
                         multiple=true
-                        class="dropzone-input"
+                        class="drop-input"
                         on:change=on_input_change
                     />
-
-                    <Show when=move || !upload_msg.get().is_empty()>
-                        <p class="text-center mt-3 text-sm text-app">{move || upload_msg.get()}</p>
-                    </Show>
                 </div>
+
+                // Peer indicators below the dropzone
+                <div class="peer-bar">
+                    <For
+                        each=move || peers.get()
+                        key=|name| name.clone()
+                        children=move |name: String| {
+                            view! {
+                                <span class="peer-pill">
+                                    <span class="peer-dot"></span>
+                                    {name}
+                                </span>
+                            }
+                        }
+                    />
+                </div>
+
+                // Upload result toast
+                <Show when=move || !upload_msg.get().is_empty()>
+                    <div class=move || {
+                        if upload_ok.get() {
+                            "upload-toast success"
+                        } else {
+                            "upload-toast error"
+                        }
+                    }>
+                        {move || upload_msg.get()}
+                    </div>
+                </Show>
             </Show>
         </div>
     }

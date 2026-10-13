@@ -13,9 +13,12 @@ pub struct DiscoveredPeer {
     pub port: u16,
 }
 
+pub type PeersMap = Arc<Mutex<HashMap<String, DiscoveredPeer>>>;
+
 pub struct Discovery {
     daemon: ServiceDaemon,
-    peers: Arc<Mutex<HashMap<String, DiscoveredPeer>>>,
+    peers: PeersMap,
+    self_fullname: Arc<Mutex<Option<String>>>,
 }
 
 impl Discovery {
@@ -24,6 +27,7 @@ impl Discovery {
         Ok(Self {
             daemon,
             peers: Arc::new(Mutex::new(HashMap::new())),
+            self_fullname: Arc::new(Mutex::new(None)),
         })
     }
 
@@ -40,28 +44,48 @@ impl Discovery {
             None,
         )?;
 
+        let fullname = format!("{}._beats._tcp.local.", instance_name);
+        if let Ok(mut name) = self.self_fullname.lock() {
+            *name = Some(fullname.clone());
+        }
+
         self.daemon.register(service)?;
-        tracing::info!("Registered mDNS service: {} at {}:{}", instance_name, ip, port);
+        tracing::info!("Registered mDNS service: {} (fullname: {}) at {}:{}", instance_name, fullname, ip, port);
         Ok(())
     }
 
     pub fn browse(&self) -> Result<(), mdns_sd::Error> {
         let receiver = self.daemon.browse(SERVICE_TYPE)?;
         let peers = Arc::clone(&self.peers);
+        let self_fullname = Arc::clone(&self.self_fullname);
 
         std::thread::spawn(move || {
             while let Ok(event) = receiver.recv() {
                 match event {
                     ServiceEvent::ServiceResolved(info) => {
+                        let fullname = info.get_fullname().to_string();
+
+                        // Skip our own service
+                        if let Ok(self_name) = self_fullname.lock() {
+                            if self_name.as_deref() == Some(&fullname) {
+                                tracing::debug!("Skipping self: {}", fullname);
+                                continue;
+                            }
+                        }
+
                         if let Some(addr) = info.get_addresses().iter().next() {
+                            let display_name = fullname
+                                .strip_suffix("._beats._tcp.local.")
+                                .unwrap_or(&fullname)
+                                .to_string();
                             let peer = DiscoveredPeer {
-                                name: info.get_fullname().to_string(),
+                                name: display_name,
                                 ip: addr.to_string(),
                                 port: info.get_port(),
                             };
                             tracing::info!("Discovered peer: {} at {}:{}", peer.name, peer.ip, peer.port);
                             if let Ok(mut map) = peers.lock() {
-                                map.insert(peer.name.clone(), peer);
+                                map.insert(fullname, peer);
                             }
                         }
                     }
@@ -84,6 +108,10 @@ impl Discovery {
             .lock()
             .map(|map| map.values().cloned().collect())
             .unwrap_or_default()
+    }
+
+    pub fn peers_handle(&self) -> PeersMap {
+        Arc::clone(&self.peers)
     }
 
     pub fn shutdown(self) -> Result<(), mdns_sd::Error> {

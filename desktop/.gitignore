@@ -15,5 +15,6 @@ target/
 
 node_modules
 
+assets/style/app.css
 
 dist 

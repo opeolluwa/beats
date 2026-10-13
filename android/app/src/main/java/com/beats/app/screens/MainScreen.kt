@@ -1,5 +1,6 @@
 package com.beats.app.screens
 
+import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,20 +35,18 @@ fun MainScreen(
     onBroadcastClick: () -> Unit,
     onJoinClick: () -> Unit,
     onRefreshClick: () -> Unit,
-    onSelectFiles: () -> Unit,
-    onSend: () -> Unit,
+    onUploadUris: (List<Uri>) -> Unit,
     onDisconnect: () -> Unit
 ) {
     when (connectionStatus) {
         ConnectionStatus.Connected -> {
             if (connectedPeer != null) {
-                TransferScreen(
+                TabbedTransferScreen(
                     peer = connectedPeer,
                     uploads = uploads,
                     downloads = downloads,
                     isSending = isSending,
-                    onSelectFiles = onSelectFiles,
-                    onSend = onSend,
+                    onUploadUris = onUploadUris,
                     onDisconnect = onDisconnect
                 )
             }

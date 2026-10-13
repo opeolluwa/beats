@@ -58,3 +58,36 @@
 @keyframes l12 {
   100% { transform: rotate(.5turn); }
 }
+
+.dropzone {
+  position: relative;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dropzone-full {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.dropzone:hover {
+  background-color: rgba(48, 116, 245, 0.04);
+}
+
+.dropzone-active {
+  background-color: rgba(48, 116, 245, 0.08);
+}
+
+.dropzone-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}

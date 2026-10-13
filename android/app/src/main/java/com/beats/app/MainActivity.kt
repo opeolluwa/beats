@@ -99,13 +99,7 @@ class MainActivity : ComponentActivity() {
                     onBroadcastClick = { startBroadcast() },
                     onJoinClick = { joinNetwork() },
                     onRefreshClick = { refreshDiscovery() },
-                    onSelectFiles = { filePickerLauncher.launch(arrayOf("*/*")) },
-                    onSend = {
-                        if (pendingUris.isNotEmpty()) {
-                            vm.uploadFiles(pendingUris, contentResolver)
-                            selectedFileUris.value = emptyList()
-                        }
-                    },
+                    onUploadUris = { uris -> vm.uploadFiles(uris, contentResolver) },
                     onDisconnect = { vm.disconnect() }
                 )
             }

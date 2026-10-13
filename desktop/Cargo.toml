@@ -20,7 +20,20 @@ serde-wasm-bindgen = { workspace = true }
 thaw = { workspace = true, features = ["csr"] }
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
-web-sys = { workspace = true }
+web-sys = { workspace = true, features = [
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "Headers",
+    "FormData",
+    "DragEvent",
+    "DataTransfer",
+    "HtmlInputElement",
+    "FileList",
+    "File",
+    "Blob",
+] }
 kernel.workspace = true
 
 

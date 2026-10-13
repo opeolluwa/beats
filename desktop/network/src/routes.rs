@@ -37,6 +37,18 @@ pub struct AckRequest {
 
 pub type OutboxState = Arc<Mutex<Vec<OutboxEntry>>>;
 
+pub async fn list_peers(
+    State(state): State<crate::router::AppState>,
+) -> impl IntoResponse {
+    let peers: Vec<_> = state
+        .peers
+        .lock()
+        .map(|map| map.values().cloned().collect())
+        .unwrap_or_default();
+    tracing::debug!("GET /api/peers — returning {} peer(s)", peers.len());
+    (StatusCode::OK, Json(serde_json::to_value(peers).unwrap()))
+}
+
 pub async fn accept_file_upload(
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
@@ -194,14 +206,14 @@ fn outbox_dir() -> PathBuf {
 }
 
 pub async fn list_outbox(
-    State(outbox): State<OutboxState>,
+    State(state): State<crate::router::AppState>,
 ) -> impl IntoResponse {
-    let entries = outbox.lock().unwrap().clone();
+    let entries = state.outbox.lock().unwrap().clone();
     (StatusCode::OK, Json(serde_json::to_value(entries).unwrap()))
 }
 
 pub async fn stage_for_outbox(
-    State(outbox): State<OutboxState>,
+    State(state): State<crate::router::AppState>,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<Value>), (StatusCode, String)> {
     let dir = outbox_dir();
@@ -234,7 +246,7 @@ pub async fn stage_for_outbox(
         let size = fs::metadata(&dest).map(|m| m.len()).unwrap_or(0);
         let id = uuid::Uuid::new_v4().to_string();
 
-        outbox.lock().unwrap().push(OutboxEntry {
+        state.outbox.lock().unwrap().push(OutboxEntry {
             id,
             name: file_name,
             size,
@@ -249,10 +261,10 @@ pub async fn stage_for_outbox(
 }
 
 pub async fn ack_outbox_file(
-    State(outbox): State<OutboxState>,
+    State(state): State<crate::router::AppState>,
     Json(ack): Json<AckRequest>,
 ) -> impl IntoResponse {
-    let mut entries = outbox.lock().unwrap();
+    let mut entries = state.outbox.lock().unwrap();
     if let Some(pos) = entries.iter().position(|e| e.id == ack.id) {
         let entry = entries.remove(pos);
         let _ = fs::remove_file(&entry.path);
@@ -271,15 +283,22 @@ pub async fn ack_outbox_file(
 #[cfg(test)]
 mod basic_endpoints {
     use crate::router;
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex};
 
     use axum::{
         body::Body,
         http::{Request, StatusCode},
     };
     use tower::ServiceExt;
+
+    fn empty_peers() -> crate::discovery::PeersMap {
+        Arc::new(Mutex::new(HashMap::new()))
+    }
+
     #[tokio::test]
     async fn ping_endpoint() {
-        let app = router::app();
+        let app = router::app(empty_peers());
 
         let response = app
             .oneshot(Request::builder().uri("/api/ping").body(Body::empty()).unwrap())
@@ -289,14 +308,10 @@ mod basic_endpoints {
         assert_eq!(response.status(), StatusCode::OK);
     }
 
-    // 404 path--
     #[tokio::test]
     async fn not_found_handler() {
-        let app = router::app();
+        let app = router::app(empty_peers());
 
-        // the 404 handle should return this json
-        // it will return a NOT_FOUND  status code
-        // the test will test for the validity of  this.
         let response = app
             .oneshot(
                 Request::builder()
@@ -307,7 +322,6 @@ mod basic_endpoints {
             .await
             .unwrap();
 
-        // assert  the the status code is 404
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 }

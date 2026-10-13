@@ -13,6 +13,7 @@ use tower_http::trace::TraceLayer;
 use axum::extract::DefaultBodyLimit;
 use axum::http::Method;
 
+use crate::discovery::PeersMap;
 use crate::errors::ServerError;
 use crate::router;
 
@@ -23,7 +24,7 @@ use kernel::config::KEY_CHAIN_PATH;
 pub struct EmbeddedHttpServer;
 
 impl EmbeddedHttpServer {
-    pub async fn run(socket_address: Arc<IpAddr>) -> Result<(), ServerError> {
+    pub async fn run(socket_address: Arc<IpAddr>, peers: PeersMap) -> Result<(), ServerError> {
         tracing_subscriber::fmt()
             .with_max_level(tracing::Level::DEBUG)
             .init();
@@ -43,6 +44,7 @@ impl EmbeddedHttpServer {
         tokio::spawn(Self::serve_http(
             ports,
             Arc::clone(&socket_address),
+            peers.clone(),
         ));
 
         // configure certificate and private key used by https
@@ -60,13 +62,13 @@ impl EmbeddedHttpServer {
         //  run the https server on localhost then feed off the connection using the wifi gateway, the same way Vite/Vue CLI would do the core server
         // this is currently achieved by binding the server to the device default ip address
 
-        let socket_address = format!("{:?}:{:?}", socket_address, ports.https);
-        let socket_address = socket_address
+        let bind_addr = format!("0.0.0.0:{}", ports.https);
+        let bind_addr = bind_addr
             .parse::<std::net::SocketAddr>()
             .map_err(|err| ServerError::StartUpError(err.to_string()))?;
 
-        println!("my local ip is {}", socket_address);
-        let app = router::app()
+        println!("HTTPS server on {}", bind_addr);
+        let app = router::app(peers)
             .layer(file_limit)
             .layer(cors_layer)
             .layer(tower_http::trace::TraceLayer::new_for_http())
@@ -75,8 +77,8 @@ impl EmbeddedHttpServer {
                     .make_span_with(DefaultMakeSpan::default().include_headers(true)),
             );
 
-        tracing::debug!(" the server port is http://{}", socket_address);
-        axum_server::bind_rustls(socket_address, config)
+        tracing::debug!("HTTPS server listening on https://{}", bind_addr);
+        axum_server::bind_rustls(bind_addr, config)
             .serve(app.into_make_service())
             .await
             .map_err(|err| ServerError::StartUpError(err.to_string()))?;
@@ -86,7 +88,8 @@ impl EmbeddedHttpServer {
 
     async fn serve_http(
         ports: Ports,
-        socket_address: Arc<IpAddr>,
+        _socket_address: Arc<IpAddr>,
+        peers: PeersMap,
     ) -> Result<(), ServerError> {
         let cors_layer = CorsLayer::new()
             .allow_headers(Any)
@@ -96,7 +99,7 @@ impl EmbeddedHttpServer {
         let file_size_limit = 10 * 1024 * 1024 * 1024;
         let file_limit = DefaultBodyLimit::max(file_size_limit);
 
-        let app = router::app()
+        let app = router::app(peers)
             .layer(file_limit)
             .layer(cors_layer)
             .layer(
@@ -104,15 +107,15 @@ impl EmbeddedHttpServer {
                     .make_span_with(DefaultMakeSpan::default().include_headers(true)),
             );
 
-        let socket_address = format!("{:?}:{:?}", socket_address, ports.http);
-        let socket_address = socket_address
+        let bind_addr = format!("0.0.0.0:{}", ports.http);
+        let bind_addr = bind_addr
             .parse::<std::net::SocketAddr>()
             .map_err(|err| ServerError::StartUpError(err.to_string()))?;
 
-        let listener = tokio::net::TcpListener::bind(socket_address)
+        let listener = tokio::net::TcpListener::bind(bind_addr)
             .await
             .map_err(|err| ServerError::StartUpError(err.to_string()))?;
-        tracing::debug!("HTTP server listening on http://{}", socket_address);
+        tracing::debug!("HTTP server listening on http://{}", bind_addr);
         axum::serve(listener, app)
             .await
             .map_err(|err| ServerError::StartUpError(err.to_string()))?;

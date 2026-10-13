@@ -1,6 +1,3 @@
-mod database;
-mod error;
-mod utils;
 use network::discovery::Discovery;
 use network::server::EmbeddedHttpServer;
 use local_ip_address::local_ip;

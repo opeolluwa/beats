@@ -144,7 +144,7 @@ private fun FileProgressItem(name: String, progress: Float, done: Boolean) {
             if (!done) {
                 Spacer(modifier = Modifier.height(4.dp))
                 LinearProgressIndicator(
-                    progress = { progress },
+                    progress = progress,
                     modifier = Modifier.fillMaxWidth(),
                     color = Accent
                 )

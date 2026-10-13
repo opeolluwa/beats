@@ -27,19 +27,24 @@ pub fn run() {
     let local_ip = local_ip().unwrap_or(IpAddr::from(Ipv4Addr::UNSPECIFIED));
     let app_state = AppState {
         server_config: EmbeddedServerConfig::default(),
-        
-    };
 
-    tauri::async_runtime::spawn(EmbeddedHttpServer::run(Arc::new(local_ip)));
+    };
 
     let hostname = hostname::get()
         .map(|h| h.to_string_lossy().to_string())
         .unwrap_or_else(|_| "beats-desktop".to_string());
-    if let Ok(discovery) = Discovery::new() {
+
+    let peers = if let Ok(discovery) = Discovery::new() {
         let _ = discovery.register(&hostname, local_ip, HTTP_PORT as u16);
         let _ = discovery.browse();
+        let peers = discovery.peers_handle();
         std::mem::forget(discovery);
-    }
+        peers
+    } else {
+        Arc::new(std::sync::Mutex::new(std::collections::HashMap::new()))
+    };
+
+    tauri::async_runtime::spawn(EmbeddedHttpServer::run(Arc::new(local_ip), peers));
 
     tauri::Builder::default()
         .setup(move |app| {

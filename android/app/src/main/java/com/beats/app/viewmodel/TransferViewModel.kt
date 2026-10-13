@@ -103,8 +103,8 @@ class TransferViewModel : ViewModel() {
         pollingJob?.cancel()
         pollingJob = viewModelScope.launch {
             val destDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                "beats"
+                Environment.getExternalStorageDirectory(),
+                "Beats"
             )
             while (true) {
                 delay(3000)

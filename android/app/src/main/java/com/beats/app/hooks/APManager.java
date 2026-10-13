@@ -206,17 +206,8 @@ public class APManager {
     }
 
     private String getRandomPassword() {
-        try {
-            MessageDigest ms = MessageDigest.getInstance("MD5");
-            byte[] bytes = new byte[10];
-            new Random().nextBytes(bytes);
-            byte[] digest = ms.digest(bytes);
-            BigInteger bigInteger = new BigInteger(1, digest);
-            return bigInteger.toString(16).substring(0, 6);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-        return "jfs82433#$2";
+        int pin = 1000 + new Random().nextInt(9000);
+        return String.valueOf(pin);
     }
 
     public static class Utils {

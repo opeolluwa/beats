@@ -1,6 +1,6 @@
 pub(crate) mod errors;
-pub(crate) mod router;
-pub(crate) mod routes;
+pub mod router;
+pub mod routes;
 pub mod discovery;
 
 #[cfg(feature = "config")]

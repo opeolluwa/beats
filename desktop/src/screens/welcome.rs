@@ -1,55 +1,450 @@
-use crate::leptos_dom::logging::console_log;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use leptos::view;
-use leptos_qr::QrCode;
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
+use wasm_bindgen_futures::JsFuture;
+use web_sys::{
+    console, js_sys, DragEvent, FormData, HtmlInputElement, Request, RequestInit, RequestMode,
+    Response,
+};
 
-#[leptos::component]
-pub fn WelcomeScreen() -> impl leptos::IntoView {
-    let (greet_msg, set_greet_msg) = signal(String::new());
-    let (server_config, set_server_config) = signal::<String>(String::new());
+use crate::components::pulsing_circle::PulsingCirclesAnimation;
 
-    //TODO: add validation to ensure the server is not a loop back address
+async fn fetch_peers() -> Vec<String> {
+    let opts = RequestInit::new();
+    opts.set_method("GET");
+    opts.set_mode(RequestMode::Cors);
 
-    spawn_local(async move {
-        let result = call_greet("alex").await;
-        set_greet_msg.set(result);
-        let server_config = cmd_extract_connection().await;
-        set_server_config.set(format!("{:#?}", server_config.to_string()));
-    });
+    let request = match Request::new_with_str_and_init("http://127.0.0.1:18005/api/peers", &opts) {
+        Ok(r) => r,
+        Err(_) => return vec![],
+    };
 
-    view! {
-        <div class="text-center flex flex-col align-center justify-center items-center h-[90%]">
-             
-            <div class="w-[180px] h-[180px] block mx-auto mb-2 rounded-md bg-blend-multiply">
-                <QrCode
-                    data=server_config
-                    ecl=leptos_qr::ECL::Q
-                    shape=leptos_qr::Shape::Square
-                    bg_color="#f5f7f7"
-                    fg_color="#0c0c0c"
-                />
-            </div>
+    let window = web_sys::window().unwrap();
+    let resp = match JsFuture::from(window.fetch_with_request(&request)).await {
+        Ok(r) => r,
+        Err(e) => {
+            console::log_1(&format!("[beats] fetch_peers error: {:?}", e).into());
+            return vec![];
+        }
+    };
 
-       <h6 class="font-medium leading-2 text-gray-700 dark:text-gray-400 mt-1 mb-5">
-                "Scan QR code to pair mobile device"
-            </h6>
+    let resp: Response = resp.dyn_into().unwrap();
+    let json = match JsFuture::from(resp.json().unwrap()).await {
+        Ok(j) => j,
+        Err(_) => return vec![],
+    };
 
-            <button class="font-medium leading-2  text-gray-700  mt-3 btn bg-app-500  capitalize shadow-md mt-2 outline-none btn-md text-white block w-[250px] hover:bg-app-400  btn-md">
-                refresh
-            </button>
+    let arr = js_sys::Array::from(&json);
+    console::log_1(&format!("[beats] peers response: {} items", arr.length()).into());
+    let mut names = Vec::new();
+    for i in 0..arr.length() {
+        let obj = arr.get(i);
+        if let Ok(name) = js_sys::Reflect::get(&obj, &JsValue::from_str("name")) {
+            if let Some(n) = name.as_string() {
+                names.push(n);
+            }
+        }
+    }
+    names
+}
 
-        </div>
+async fn upload_files(form_data: FormData) -> bool {
+    let opts = RequestInit::new();
+    opts.set_method("POST");
+    opts.set_mode(RequestMode::Cors);
+    opts.set_body(&form_data);
+
+    let request =
+        match Request::new_with_str_and_init("http://127.0.0.1:18005/api/outbox", &opts) {
+            Ok(r) => r,
+            Err(_) => return false,
+        };
+
+    let window = web_sys::window().unwrap();
+    match JsFuture::from(window.fetch_with_request(&request)).await {
+        Ok(r) => {
+            let resp: Response = r.dyn_into().unwrap();
+            resp.ok()
+        }
+        Err(_) => false,
     }
 }
 
-async fn call_greet(name: &str) -> String {
-    kernel::cmd::greet(&name).await
-}
+#[leptos::component]
+pub fn WelcomeScreen() -> impl leptos::IntoView {
+    let (peers, set_peers) = signal(Vec::<String>::new());
+    let (uploading, set_uploading) = signal(false);
+    let (upload_msg, set_upload_msg) = signal(String::new());
+    let (upload_ok, set_upload_ok) = signal(false);
+    let (drag_over, set_drag_over) = signal(false);
+    let (file_count, set_file_count) = signal(0u32);
 
-use kernel::cmd;
-use kernel::config::EmbeddedServerConfig;
+    // Initial fetch
+    wasm_bindgen_futures::spawn_local(async move {
+        let found = fetch_peers().await;
+        set_peers.set(found);
+    });
 
-pub async fn cmd_extract_connection() -> EmbeddedServerConfig {
-    cmd::extract_connection().await
+    let set_peers_poll = set_peers.clone();
+    set_interval_with_handle(
+        move || {
+            let set_peers = set_peers_poll.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let found = fetch_peers().await;
+                set_peers.set(found);
+            });
+        },
+        std::time::Duration::from_secs(3),
+    )
+    .ok();
+
+    let handle_files = move |file_list: web_sys::FileList| {
+        let count = file_list.length();
+        set_file_count.set(count);
+        set_uploading.set(true);
+        set_upload_msg.set(String::new());
+        set_upload_ok.set(false);
+
+        wasm_bindgen_futures::spawn_local(async move {
+            let form_data = FormData::new().unwrap();
+            for i in 0..file_list.length() {
+                if let Some(file) = file_list.get(i) {
+                    let _ = form_data.append_with_blob_and_filename("file", &file, &file.name());
+                }
+            }
+            let ok = upload_files(form_data).await;
+            set_uploading.set(false);
+            set_upload_ok.set(ok);
+            if ok {
+                set_upload_msg.set("Files staged for transfer".to_string());
+            } else {
+                set_upload_msg.set("Upload failed — check connection".to_string());
+            }
+        });
+    };
+
+    let handle_files_clone = handle_files.clone();
+
+    let on_drop = move |ev: DragEvent| {
+        ev.prevent_default();
+        set_drag_over.set(false);
+        if let Some(dt) = ev.data_transfer() {
+            if let Some(files) = dt.files() {
+                handle_files(files);
+            }
+        }
+    };
+
+    let on_drag_over = move |ev: DragEvent| {
+        ev.prevent_default();
+        set_drag_over.set(true);
+    };
+
+    let on_drag_leave = move |ev: DragEvent| {
+        ev.prevent_default();
+        set_drag_over.set(false);
+    };
+
+    let on_input_change = move |ev: leptos::ev::Event| {
+        let target = ev.target().unwrap();
+        let input: HtmlInputElement = target.dyn_into().unwrap();
+        if let Some(files) = input.files() {
+            handle_files_clone(files);
+        }
+    };
+
+    let has_peers = move || !peers.get().is_empty();
+
+    view! {
+        <style>
+            "
+            .drop-container {
+                position: relative;
+                width: 100%;
+                max-width: 520px;
+                aspect-ratio: 4 / 3;
+                border-radius: 16px;
+                border: 1.5px dashed var(--drop-border, rgba(140, 140, 160, 0.25));
+                background: var(--drop-bg, rgba(140, 140, 160, 0.03));
+                transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                overflow: hidden;
+            }
+
+            .drop-container:hover {
+                border-color: rgba(140, 140, 160, 0.4);
+                background: rgba(140, 140, 160, 0.05);
+            }
+
+            .drop-container.dragging {
+                border-color: var(--color-app, #6366f1);
+                border-style: solid;
+                background: rgba(99, 102, 241, 0.06);
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+                transform: scale(1.01);
+            }
+
+            .drop-container .drop-input {
+                position: absolute;
+                inset: 0;
+                opacity: 0;
+                cursor: pointer;
+            }
+
+            .drop-icon {
+                width: 48px;
+                height: 48px;
+                margin-bottom: 16px;
+                opacity: 0.3;
+                transition: opacity 0.2s, transform 0.2s;
+            }
+
+            .drop-container:hover .drop-icon,
+            .drop-container.dragging .drop-icon {
+                opacity: 0.5;
+                transform: translateY(-2px);
+            }
+
+            .drop-label {
+                font-size: 15px;
+                font-weight: 500;
+                color: var(--text-secondary, #6b7280);
+                margin-bottom: 4px;
+            }
+
+            .drop-hint {
+                font-size: 13px;
+                color: var(--text-tertiary, #9ca3af);
+            }
+
+            .drop-container.dragging .drop-label {
+                color: var(--color-app, #6366f1);
+            }
+
+            /* Peer pills */
+            .peer-bar {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                margin-top: 20px;
+                flex-wrap: wrap;
+            }
+
+            .peer-pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 12px 5px 10px;
+                border-radius: 100px;
+                background: rgba(16, 185, 129, 0.08);
+                border: 1px solid rgba(16, 185, 129, 0.15);
+                font-size: 12px;
+                font-weight: 500;
+                color: #10b981;
+                letter-spacing: 0.01em;
+            }
+
+            .peer-dot {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #10b981;
+                animation: peer-pulse 2s ease-in-out infinite;
+            }
+
+            @keyframes peer-pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.4; }
+            }
+
+            /* Upload spinner */
+            .upload-spinner {
+                width: 32px;
+                height: 32px;
+                border: 2.5px solid rgba(140, 140, 160, 0.15);
+                border-top-color: var(--color-app, #6366f1);
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+                margin-bottom: 14px;
+            }
+
+            @keyframes spin {
+                to { transform: rotate(360deg); }
+            }
+
+            .upload-status {
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--text-secondary, #6b7280);
+            }
+
+            /* Toast */
+            .upload-toast {
+                margin-top: 14px;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 500;
+                animation: toast-in 0.25s ease-out;
+            }
+
+            .upload-toast.success {
+                background: rgba(16, 185, 129, 0.08);
+                border: 1px solid rgba(16, 185, 129, 0.15);
+                color: #10b981;
+            }
+
+            .upload-toast.error {
+                background: rgba(239, 68, 68, 0.08);
+                border: 1px solid rgba(239, 68, 68, 0.15);
+                color: #ef4444;
+            }
+
+            @keyframes toast-in {
+                from { opacity: 0; transform: translateY(4px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            /* Waiting state */
+            .waiting-container {
+                text-align: center;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .waiting-label {
+                font-size: 14px;
+                font-weight: 500;
+                color: var(--text-tertiary, #9ca3af);
+                margin-top: 6px;
+            }
+
+            /* Dark mode overrides */
+            @media (prefers-color-scheme: dark) {
+                .drop-container {
+                    --drop-border: rgba(160, 160, 180, 0.12);
+                    --drop-bg: rgba(160, 160, 180, 0.03);
+                }
+                .drop-container:hover {
+                    border-color: rgba(160, 160, 180, 0.22);
+                    background: rgba(160, 160, 180, 0.05);
+                }
+                .drop-label { color: #a1a1aa; }
+                .drop-hint { color: #71717a; }
+            }
+            "
+        </style>
+
+        <div class="flex flex-col items-center justify-center h-[90%]">
+            <Show
+                when=has_peers
+                fallback=move || {
+                    view! {
+                        <div class="waiting-container">
+                            <PulsingCirclesAnimation />
+                            <p class="waiting-label">"Looking for nearby devices"</p>
+                        </div>
+                    }
+                }
+            >
+                <div
+                    class=move || {
+                        if drag_over.get() {
+                            "drop-container dragging"
+                        } else {
+                            "drop-container"
+                        }
+                    }
+                    on:drop=on_drop
+                    on:dragover=on_drag_over
+                    on:dragleave=on_drag_leave
+                >
+                    <div class="flex flex-col items-center justify-center pointer-events-none select-none">
+                        <Show
+                            when=move || uploading.get()
+                            fallback=move || {
+                                view! {
+                                    <div class="flex flex-col items-center justify-center">
+                                        <svg
+                                            class="drop-icon"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke-width="1.5"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5"
+                                            />
+                                        </svg>
+                                        <p class="drop-label">"Drop files here"</p>
+                                        <p class="drop-hint">"or click to browse"</p>
+                                    </div>
+                                }
+                            }
+                        >
+                            <div class="flex flex-col items-center justify-center">
+                                <div class="upload-spinner"></div>
+                                <p class="upload-status">
+                                    {move || {
+                                        let c = file_count.get();
+                                        if c == 1 {
+                                            "Sending 1 file\u{2026}".to_string()
+                                        } else {
+                                            format!("Sending {} files\u{2026}", c)
+                                        }
+                                    }}
+                                </p>
+                            </div>
+                        </Show>
+                    </div>
+
+                    <input
+                        type="file"
+                        multiple=true
+                        class="drop-input"
+                        on:change=on_input_change
+                    />
+                </div>
+
+                // Peer indicators below the dropzone
+                <div class="peer-bar">
+                    <For
+                        each=move || peers.get()
+                        key=|name| name.clone()
+                        children=move |name: String| {
+                            view! {
+                                <span class="peer-pill">
+                                    <span class="peer-dot"></span>
+                                    {name}
+                                </span>
+                            }
+                        }
+                    />
+                </div>
+
+                // Upload result toast
+                <Show when=move || !upload_msg.get().is_empty()>
+                    <div class=move || {
+                        if upload_ok.get() {
+                            "upload-toast success"
+                        } else {
+                            "upload-toast error"
+                        }
+                    }>
+                        {move || upload_msg.get()}
+                    </div>
+                </Show>
+            </Show>
+        </div>
+    }
 }

@@ -19,13 +19,25 @@ import androidx.core.view.WindowCompat
 private val DarkColorScheme = darkColorScheme(
     primary = Accent,
     secondary = PurpleGrey80,
-    tertiary = Pink80
+    tertiary = Pink80,
+    onSurface = Color.White,
+    onBackground = Color.White,
+    onSurfaceVariant = Color.White,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = Accent,
     secondary = PurpleGrey40,
-    tertiary = Pink40
+    tertiary = Pink40,
+    onSurface = Color.White,
+    onBackground = Color.White,
+    onSurfaceVariant = Color.White,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White
 
 )
 
@@ -33,7 +45,7 @@ private val LightColorScheme = lightColorScheme(
 fun BeatsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {

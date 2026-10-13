@@ -1,8 +1,9 @@
-use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
+
+use mdns_sd::{ServiceDaemon, ServiceEvent, ServiceInfo};
+use serde::{Deserialize, Serialize};
 
 const SERVICE_TYPE: &str = "_beats._tcp.local.";
 
@@ -35,14 +36,7 @@ impl Discovery {
         let host = format!("{}.local.", device_name.to_lowercase().replace(' ', "-"));
         let instance_name = device_name;
 
-        let service = ServiceInfo::new(
-            SERVICE_TYPE,
-            instance_name,
-            &host,
-            ip,
-            port,
-            None,
-        )?;
+        let service = ServiceInfo::new(SERVICE_TYPE, instance_name, &host, ip, port, None)?;
 
         let fullname = format!("{}._beats._tcp.local.", instance_name);
         if let Ok(mut name) = self.self_fullname.lock() {
@@ -50,7 +44,13 @@ impl Discovery {
         }
 
         self.daemon.register(service)?;
-        tracing::info!("Registered mDNS service: {} (fullname: {}) at {}:{}", instance_name, fullname, ip, port);
+        tracing::info!(
+            "Registered mDNS service: {} (fullname: {}) at {}:{}",
+            instance_name,
+            fullname,
+            ip,
+            port
+        );
         Ok(())
     }
 
@@ -83,7 +83,12 @@ impl Discovery {
                                 ip: addr.to_string(),
                                 port: info.get_port(),
                             };
-                            tracing::info!("Discovered peer: {} at {}:{}", peer.name, peer.ip, peer.port);
+                            tracing::info!(
+                                "Discovered peer: {} at {}:{}",
+                                peer.name,
+                                peer.ip,
+                                peer.port
+                            );
                             if let Ok(mut map) = peers.lock() {
                                 map.insert(fullname, peer);
                             }

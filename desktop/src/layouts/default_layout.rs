@@ -5,15 +5,23 @@ use leptos::{
     view,
 };
 
+use crate::components::title_bar::TitleBar;
+
 #[leptos::component]
 pub fn DefaultLayout(children: Children) -> impl leptos::IntoView {
     let children = children();
     view! {
         <div
-            class="grid grid-cols-12 mb-0 pb-0 w-[100vw] gap-x-2"
-            style="height:100vh; overflow-y: hidden; margin-bottom:0 dark:bg-gray-900"
+            style="height:100vh; display:flex; flex-direction:column; overflow:hidden;"
+            class="dark:bg-gray-900"
         >
-            <main class="col-span-12 py-4 px-4 overflow-y-scroll h-screen">{children}</main>
+            <TitleBar />
+            <main
+                class="px-4 py-4 overflow-y-auto"
+                style="flex:1; min-height:0;"
+            >
+                {children}
+            </main>
         </div>
     }
 }

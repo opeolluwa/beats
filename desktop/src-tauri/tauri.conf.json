@@ -16,7 +16,8 @@
       {
         "title": "Beats",
         "width": 750,
-        "height": 600
+        "height": 600,
+        "decorations": false
       }
     ],
     "security": {

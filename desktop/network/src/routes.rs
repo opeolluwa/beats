@@ -1,21 +1,20 @@
+use std::fs;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+
 use axum::body::{Body, Bytes};
 use axum::extract::{Multipart, Query, State};
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::{BoxError, Json};
 use futures::stream::{Stream, TryStreamExt};
-
 use http::header;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use serde_json::Value;
-use std::fs;
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use tokio_util::io::{ReaderStream, StreamReader};
-
+use serde_json::json;
 use tokio::fs::File;
 use tokio::io::{self, BufWriter};
+use tokio_util::io::{ReaderStream, StreamReader};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QueryParams {
@@ -37,9 +36,7 @@ pub struct AckRequest {
 
 pub type OutboxState = Arc<Mutex<Vec<OutboxEntry>>>;
 
-pub async fn list_peers(
-    State(state): State<crate::router::AppState>,
-) -> impl IntoResponse {
+pub async fn list_peers(State(state): State<crate::router::AppState>) -> impl IntoResponse {
     let peers: Vec<_> = state
         .peers
         .lock()
@@ -166,7 +163,7 @@ pub async fn get_file(Query(QueryParams { file_path }): Query<QueryParams>) -> i
             return Err((
                 StatusCode::BAD_REQUEST,
                 "MIME Type couldn't be determined".to_string(),
-            ))
+            ));
         }
     };
 
@@ -179,7 +176,7 @@ pub async fn get_file(Query(QueryParams { file_path }): Query<QueryParams>) -> i
             return Err((
                 StatusCode::BAD_REQUEST,
                 "File name couldn't be determined".to_string(),
-            ))
+            ));
         }
     };
 
@@ -205,9 +202,7 @@ fn outbox_dir() -> PathBuf {
     dir
 }
 
-pub async fn list_outbox(
-    State(state): State<crate::router::AppState>,
-) -> impl IntoResponse {
+pub async fn list_outbox(State(state): State<crate::router::AppState>) -> impl IntoResponse {
     let entries = state.outbox.lock().unwrap().clone();
     (StatusCode::OK, Json(serde_json::to_value(entries).unwrap()))
 }
@@ -230,8 +225,7 @@ pub async fn stage_for_outbox(
         }
 
         let dest = dir.join(&file_name);
-        let body_with_io_error =
-            field.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
+        let body_with_io_error = field.map_err(|err| io::Error::new(io::ErrorKind::Other, err));
         let body_reader = StreamReader::new(body_with_io_error);
         futures::pin_mut!(body_reader);
 
@@ -301,7 +295,12 @@ mod basic_endpoints {
         let app = router::app(empty_peers());
 
         let response = app
-            .oneshot(Request::builder().uri("/api/ping").body(Body::empty()).unwrap())
+            .oneshot(
+                Request::builder()
+                    .uri("/api/ping")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
             .await
             .unwrap();
 

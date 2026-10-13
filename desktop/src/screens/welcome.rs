@@ -8,7 +8,7 @@ use web_sys::{
     Response,
 };
 
-use crate::components::pulsing_circle::PulsingCirclesAnimation;
+use crate::state::AppState;
 
 async fn fetch_peers() -> Vec<String> {
     let opts = RequestInit::new();
@@ -55,11 +55,10 @@ async fn upload_files(form_data: FormData) -> bool {
     opts.set_mode(RequestMode::Cors);
     opts.set_body(&form_data);
 
-    let request =
-        match Request::new_with_str_and_init("http://127.0.0.1:18005/api/outbox", &opts) {
-            Ok(r) => r,
-            Err(_) => return false,
-        };
+    let request = match Request::new_with_str_and_init("http://127.0.0.1:18005/api/outbox", &opts) {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
 
     let window = web_sys::window().unwrap();
     match JsFuture::from(window.fetch_with_request(&request)).await {
@@ -73,12 +72,21 @@ async fn upload_files(form_data: FormData) -> bool {
 
 #[leptos::component]
 pub fn WelcomeScreen() -> impl leptos::IntoView {
-    let (peers, set_peers) = signal(Vec::<String>::new());
-    let (uploading, set_uploading) = signal(false);
-    let (upload_msg, set_upload_msg) = signal(String::new());
-    let (upload_ok, set_upload_ok) = signal(false);
+    let state = use_context::<AppState>().expect("AppState context");
+
+    let set_peers = state.set_peers;
+    let set_uploading = state.set_uploading;
+    let set_upload_msg = state.set_upload_msg;
+    let set_upload_ok = state.set_upload_ok;
+    let set_file_count = state.set_file_count;
+
+    let peers = state.peers;
+    let uploading = state.uploading;
+    let upload_msg = state.upload_msg;
+    let upload_ok = state.upload_ok;
+    let file_count = state.file_count;
+
     let (drag_over, set_drag_over) = signal(false);
-    let (file_count, set_file_count) = signal(0u32);
 
     // Initial fetch
     wasm_bindgen_futures::spawn_local(async move {
@@ -86,21 +94,24 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
         set_peers.set(found);
     });
 
-    let set_peers_poll = set_peers.clone();
-    set_interval_with_handle(
+    // Poll every 3s; stop polling when the component unmounts.
+    if let Ok(handle) = set_interval_with_handle(
         move || {
-            let set_peers = set_peers_poll.clone();
             wasm_bindgen_futures::spawn_local(async move {
                 let found = fetch_peers().await;
                 set_peers.set(found);
             });
         },
         std::time::Duration::from_secs(3),
-    )
-    .ok();
+    ) {
+        on_cleanup(move || handle.clear());
+    }
 
     let handle_files = move |file_list: web_sys::FileList| {
         let count = file_list.length();
+        if count == 0 {
+            return;
+        }
         set_file_count.set(count);
         set_uploading.set(true);
         set_upload_msg.set(String::new());
@@ -152,6 +163,8 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
         if let Some(files) = input.files() {
             handle_files_clone(files);
         }
+        // Allow picking the same file again later.
+        input.set_value("");
     };
 
     let has_peers = move || !peers.get().is_empty();
@@ -159,38 +172,30 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
     view! {
         <style>
             "
-            .drop-container {
+            .welcome-root {
                 position: relative;
                 width: 100%;
-                max-width: 520px;
-                aspect-ratio: 4 / 3;
-                border-radius: 16px;
-                border: 1.5px dashed var(--drop-border, rgba(140, 140, 160, 0.25));
-                background: var(--drop-bg, rgba(140, 140, 160, 0.03));
-                transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
+                height: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            /* Drop zone fills the entire area — no border, no background */
+            .drop-container {
+                position: absolute;
+                inset: 0;
                 cursor: pointer;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                overflow: hidden;
-            }
-
-            .drop-container:hover {
-                border-color: rgba(140, 140, 160, 0.4);
-                background: rgba(140, 140, 160, 0.05);
-            }
-
-            .drop-container.dragging {
-                border-color: var(--color-app, #6366f1);
-                border-style: solid;
-                background: rgba(99, 102, 241, 0.06);
-                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-                transform: scale(1.01);
             }
 
             .drop-container .drop-input {
                 position: absolute;
                 inset: 0;
+                width: 100%;
+                height: 100%;
                 opacity: 0;
                 cursor: pointer;
             }
@@ -199,13 +204,14 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                 width: 48px;
                 height: 48px;
                 margin-bottom: 16px;
-                opacity: 0.3;
+                color: #6b7280;
+                opacity: 0.5;
                 transition: opacity 0.2s, transform 0.2s;
             }
 
             .drop-container:hover .drop-icon,
             .drop-container.dragging .drop-icon {
-                opacity: 0.5;
+                opacity: 0.55;
                 transform: translateY(-2px);
             }
 
@@ -214,6 +220,7 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                 font-weight: 500;
                 color: var(--text-secondary, #6b7280);
                 margin-bottom: 4px;
+                transition: color 0.2s;
             }
 
             .drop-hint {
@@ -221,45 +228,21 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                 color: var(--text-tertiary, #9ca3af);
             }
 
-            .drop-container.dragging .drop-label {
-                color: var(--color-app, #6366f1);
+            .drop-container.dragging .drop-label,
+            .drop-container.dragging .drop-icon {
+                color: var(--color-app, #3074F5);
             }
 
-            /* Peer pills */
-            .peer-bar {
+            /* Bottom overlay (peers + toast) — lets drops pass through to the zone */
+            .bottom-overlay {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 24px;
                 display: flex;
+                flex-direction: column;
                 align-items: center;
-                justify-content: center;
-                gap: 8px;
-                margin-top: 20px;
-                flex-wrap: wrap;
-            }
-
-            .peer-pill {
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                padding: 5px 12px 5px 10px;
-                border-radius: 100px;
-                background: rgba(16, 185, 129, 0.08);
-                border: 1px solid rgba(16, 185, 129, 0.15);
-                font-size: 12px;
-                font-weight: 500;
-                color: #10b981;
-                letter-spacing: 0.01em;
-            }
-
-            .peer-dot {
-                width: 6px;
-                height: 6px;
-                border-radius: 50%;
-                background: #10b981;
-                animation: peer-pulse 2s ease-in-out infinite;
-            }
-
-            @keyframes peer-pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.4; }
+                pointer-events: none;
             }
 
             /* Upload spinner */
@@ -267,7 +250,7 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                 width: 32px;
                 height: 32px;
                 border: 2.5px solid rgba(140, 140, 160, 0.15);
-                border-top-color: var(--color-app, #6366f1);
+                border-top-color: var(--color-app, #3074F5);
                 border-radius: 50%;
                 animation: spin 0.7s linear infinite;
                 margin-bottom: 14px;
@@ -323,33 +306,56 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                 font-size: 14px;
                 font-weight: 500;
                 color: var(--text-tertiary, #9ca3af);
-                margin-top: 6px;
+                margin-top: 20px;
             }
 
-            /* Dark mode overrides */
+            /* Waiting-for-connection loader */
+            .loader {
+                width: 140px;
+                aspect-ratio: 1;
+                padding: 16px;
+                box-sizing: border-box;
+                background: #fff;
+                display: grid;
+                filter: blur(5px) contrast(15) hue-rotate(210deg);
+                mix-blend-mode: darken;
+            }
+            .loader:before,
+            .loader:after {
+                content: '';
+                grid-area: 1/1;
+                margin: 8px;
+                background: #3074F5;
+            }
+            .loader:after {
+                margin: 28px;
+                animation: l9 2s infinite;
+            }
+            @keyframes l9 {
+                12.5% { transform: translate(-60%, 60%) }
+                25%   { transform: translate( 65%,-65%) }
+                37.5% { transform: translate(0, 0) }
+                50%   { transform: translate( 60%, 60%) }
+                67.5% { transform: translate(-65%,-70%) }
+                75%   { transform: translate( 60%,-60%) }
+            }
+
             @media (prefers-color-scheme: dark) {
-                .drop-container {
-                    --drop-border: rgba(160, 160, 180, 0.12);
-                    --drop-bg: rgba(160, 160, 180, 0.03);
-                }
-                .drop-container:hover {
-                    border-color: rgba(160, 160, 180, 0.22);
-                    background: rgba(160, 160, 180, 0.05);
-                }
+                .drop-icon { color: #d4d4d8; opacity: 0.6; }
                 .drop-label { color: #a1a1aa; }
                 .drop-hint { color: #71717a; }
             }
             "
         </style>
 
-        <div class="flex flex-col items-center justify-center h-[90%]">
+        <div class="welcome-root">
             <Show
                 when=has_peers
                 fallback=move || {
                     view! {
                         <div class="waiting-container">
-                            <PulsingCirclesAnimation />
-                            <p class="waiting-label">"Looking for nearby devices"</p>
+                            <div class="loader"></div>
+                            <p class="waiting-label">"Waiting for connection"</p>
                         </div>
                     }
                 }
@@ -416,34 +422,20 @@ pub fn WelcomeScreen() -> impl leptos::IntoView {
                     />
                 </div>
 
-                // Peer indicators below the dropzone
-                <div class="peer-bar">
-                    <For
-                        each=move || peers.get()
-                        key=|name| name.clone()
-                        children=move |name: String| {
-                            view! {
-                                <span class="peer-pill">
-                                    <span class="peer-dot"></span>
-                                    {name}
-                                </span>
+                // Toast floats at the bottom without blocking the drop zone
+                <div class="bottom-overlay">
+                    <Show when=move || !upload_msg.get().is_empty()>
+                        <div class=move || {
+                            if upload_ok.get() {
+                                "upload-toast success"
+                            } else {
+                                "upload-toast error"
                             }
-                        }
-                    />
+                        }>
+                            {move || upload_msg.get()}
+                        </div>
+                    </Show>
                 </div>
-
-                // Upload result toast
-                <Show when=move || !upload_msg.get().is_empty()>
-                    <div class=move || {
-                        if upload_ok.get() {
-                            "upload-toast success"
-                        } else {
-                            "upload-toast error"
-                        }
-                    }>
-                        {move || upload_msg.get()}
-                    </div>
-                </Show>
             </Show>
         </div>
     }

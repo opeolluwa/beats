@@ -1,14 +1,15 @@
+use std::sync::{Arc, Mutex};
+
 use axum::{
     routing::{get, post},
     Router,
 };
-use std::sync::{Arc, Mutex};
 
-use crate::discovery::PeersMap;
 use super::routes::{
     accept_file_upload, ack_outbox_file, get_file, handle_404, health_check, list_outbox,
     list_peers, stage_for_outbox, OutboxState,
 };
+use crate::discovery::PeersMap;
 
 #[derive(Clone)]
 pub struct AppState {

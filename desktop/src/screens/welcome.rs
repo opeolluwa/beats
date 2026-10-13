@@ -9,6 +9,7 @@ use web_sys::{
 };
 
 use crate::components::pulsing_circle::PulsingCirclesAnimation;
+use crate::state::AppState;
 
 async fn fetch_peers() -> Vec<String> {
     let opts = RequestInit::new();
@@ -73,12 +74,21 @@ async fn upload_files(form_data: FormData) -> bool {
 
 #[leptos::component]
 pub fn WelcomeScreen() -> impl leptos::IntoView {
-    let (peers, set_peers) = signal(Vec::<String>::new());
-    let (uploading, set_uploading) = signal(false);
-    let (upload_msg, set_upload_msg) = signal(String::new());
-    let (upload_ok, set_upload_ok) = signal(false);
+    let state = use_context::<AppState>().expect("AppState context");
+
+    let set_peers = state.set_peers;
+    let set_uploading = state.set_uploading;
+    let set_upload_msg = state.set_upload_msg;
+    let set_upload_ok = state.set_upload_ok;
+    let set_file_count = state.set_file_count;
+
+    let peers = state.peers;
+    let uploading = state.uploading;
+    let upload_msg = state.upload_msg;
+    let upload_ok = state.upload_ok;
+    let file_count = state.file_count;
+
     let (drag_over, set_drag_over) = signal(false);
-    let (file_count, set_file_count) = signal(0u32);
 
     // Initial fetch
     wasm_bindgen_futures::spawn_local(async move {

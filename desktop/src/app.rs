@@ -1,23 +1,20 @@
 use leptos::*;
+use leptos::prelude::*;
 use leptos_router::{
     components::{Route, Router, Routes},
     path,
 };
 use thaw::ConfigProvider;
 
-// use crate::screens::about::AboutScreen;
-// use crate::screens::history::HistoryScreen;
-// use crate::screens::settings::SettingsScreen;
-// use crate::screens::share::ShareScreen;
-// use crate::screens::welcome::choose_platform::SelectPlatformScreen;
-// use crate::screens::welcome::receive::ReceiveScreen;
-// use crate::screens::welcome::select_action::TransferScreen;
-// use crate::screens::welcome::send::SendScreen;
 use crate::screens::welcome::WelcomeScreen;
 use crate::{layouts::default_layout::DefaultLayout, screens::home::HomeScreen};
+use crate::state::AppState;
 
 #[component]
 pub fn App() -> impl leptos::IntoView {
+    let app_state = AppState::new();
+    provide_context(app_state);
+
     view! {
         <ConfigProvider class="dark:bg-[#1d232a]">
             <Router>
@@ -25,13 +22,6 @@ pub fn App() -> impl leptos::IntoView {
                     <Routes transition=true fallback=|| "Not found.">
                         <Route path=path!("/") view=WelcomeScreen />
                         <Route path=path!("/home") view=HomeScreen />
-                        // <Route path=path!("/platform") view=SelectPlatformScreen />
-                        // <Route path=path!("/send") view=SendScreen />
-                        // <Route path=path!("/receive") view=ReceiveScreen />
-                        // <Route path=path!("/about") view=AboutScreen />
-                        // <Route path=path!("/settings") view=SettingsScreen />
-                        // <Route path=path!("/share") view=ShareScreen />
-                        // <Route path=path!("/history") view=HistoryScreen />
                     </Routes>
 
                 </DefaultLayout>

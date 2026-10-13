@@ -5,6 +5,7 @@ mod js_bindgen;
 mod layouts;
 mod routes;
 mod screens;
+mod state;
 
 use app::*;
 

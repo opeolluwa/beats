@@ -1,5 +1,3 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-mod commands;
 mod database;
 mod error;
 mod utils;

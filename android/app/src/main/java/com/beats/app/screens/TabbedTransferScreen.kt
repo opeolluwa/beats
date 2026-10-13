@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,12 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+// Explicit colors so this screen stays readable regardless of the theme's onSurface values.
+private val ScreenBackground = Color(0xFFFAFAFA)
+private val TextPrimary = Color(0xFF1C1B1F)
+private val TextSecondary = Color(0xFF6B6B6B)
+private val PlaceholderBg = Color(0xFFE7E7EC)
 
 private data class DeviceFile(
     val uri: Uri,
@@ -79,6 +86,8 @@ fun TabbedTransferScreen(
     val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
+        containerColor = ScreenBackground,
+        contentColor = TextPrimary,
         floatingActionButton = {
             if (selectedFiles.isNotEmpty()) {
                 FloatingActionButton(
@@ -89,10 +98,7 @@ fun TabbedTransferScreen(
                     containerColor = Accent,
                     contentColor = Color.White
                 ) {
-                    Icon(
-                        Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Upload"
-                    )
+                    Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Upload")
                 }
             }
         }
@@ -122,16 +128,21 @@ fun TabbedTransferScreen(
                 containerColor = Accent,
                 contentColor = Color.White,
                 divider = {},
-                indicator = {
-                    Divider(
-                        color = Color.White,
-                        thickness = 3.dp
-                    )
+                indicator = { tabPositions ->
+                    // Size and position the indicator under the selected tab only.
+                    if (pagerState.currentPage < tabPositions.size) {
+                        TabRowDefaults.Indicator(
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                            height = 3.dp,
+                            color = Color.White
+                        )
+                    }
                 }
             ) {
                 tabs.forEachIndexed { index, tab ->
+                    val selected = pagerState.currentPage == index
                     Tab(
-                        selected = pagerState.currentPage == index,
+                        selected = selected,
                         onClick = {
                             selectedFiles.clear()
                             coroutineScope.launch { pagerState.animateScrollToPage(index) }
@@ -139,8 +150,8 @@ fun TabbedTransferScreen(
                         text = {
                             Text(
                                 tab.title,
-                                fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal,
-                                color = if (pagerState.currentPage == index) Color.White else Color.White.copy(alpha = 0.6f)
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selected) Color.White else Color.White.copy(alpha = 0.6f)
                             )
                         }
                     )
@@ -149,7 +160,9 @@ fun TabbedTransferScreen(
 
             HorizontalPager(
                 state = pagerState,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) { page ->
                 when (tabs[page]) {
                     FileTab.History -> HistoryTabContent(uploads, downloads)
@@ -182,6 +195,16 @@ fun TabbedTransferScreen(
 }
 
 @Composable
+private fun CenteredMessage(text: String, topPadding: Boolean = false) {
+    Box(
+        modifier = if (topPadding) Modifier.fillMaxWidth().padding(top = 48.dp) else Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, fontSize = 14.sp, color = TextSecondary)
+    }
+}
+
+@Composable
 private fun HistoryTabContent(
     uploads: List<FileUploadState>,
     downloads: List<FileDownloadState>
@@ -192,7 +215,7 @@ private fun HistoryTabContent(
     ) {
         if (uploads.isNotEmpty()) {
             item {
-                Text("Uploads", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Uploads", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Spacer(modifier = Modifier.height(8.dp))
             }
             items(uploads) { file ->
@@ -202,7 +225,7 @@ private fun HistoryTabContent(
         if (downloads.isNotEmpty()) {
             item {
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Downloads", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Downloads", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 Spacer(modifier = Modifier.height(8.dp))
             }
             items(downloads) { file ->
@@ -210,20 +233,7 @@ private fun HistoryTabContent(
             }
         }
         if (uploads.isEmpty() && downloads.isEmpty()) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 48.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        "No transfer history",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
-            }
+            item { CenteredMessage("No transfer history", topPadding = true) }
         }
     }
 }
@@ -234,20 +244,23 @@ private fun HistoryProgressItem(name: String, progress: Float, done: Boolean) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White, contentColor = TextPrimary)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = name,
                     fontSize = 14.sp,
+                    color = TextPrimary,
                     modifier = Modifier.weight(1f),
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 if (done) {
                     Text("Done", fontSize = 12.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Bold)
                 } else {
-                    Text("${(progress * 100).toInt()}%", fontSize = 12.sp)
+                    Text("${(progress * 100).toInt()}%", fontSize = 12.sp, color = TextSecondary)
                 }
             }
             if (!done) {
@@ -275,29 +288,16 @@ private fun MediaGridContent(
 
     LaunchedEffect(contentUri) {
         isLoading = true
-        files = withContext(Dispatchers.IO) {
-            queryMediaFiles(contentResolver, contentUri)
-        }
+        files = withContext(Dispatchers.IO) { queryMediaFiles(contentResolver, contentUri) }
         isLoading = false
     }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Loading...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-        }
-        return
-    }
+    if (isLoading) { CenteredMessage("Loading..."); return }
+    if (files.isEmpty()) { CenteredMessage("No files found"); return }
 
-    if (files.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No files found", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-        }
-        return
-    }
-
-    val grouped = files.groupBy { file ->
+    val grouped = remember(files) {
         val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-        sdf.format(Date(file.dateModified * 1000))
+        files.groupBy { sdf.format(Date(it.dateModified * 1000)) }
     }
 
     LazyVerticalGrid(
@@ -306,21 +306,16 @@ private fun MediaGridContent(
         contentPadding = PaddingValues(2.dp)
     ) {
         grouped.forEach { (date, dateFiles) ->
-            item(span = { GridItemSpan(3) }) {
-                Row(
+            item(key = "header_$date", span = { GridItemSpan(3) }) {
+                Text(
+                    text = date,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextSecondary,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = date,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                )
             }
 
             items(dateFiles, key = { it.uri.toString() }) { file ->
@@ -352,6 +347,7 @@ private fun GridThumbnailItem(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(1.dp)
+            .background(PlaceholderBg)
             .clickable(onClick = onClick)
     ) {
         if (showThumbnail) {
@@ -366,15 +362,11 @@ private fun GridThumbnailItem(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(
                     file.name,
                     fontSize = 11.sp,
+                    color = TextPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(4.dp)
@@ -389,9 +381,7 @@ private fun GridThumbnailItem(
                 .padding(6.dp)
                 .size(24.dp)
                 .clip(CircleShape)
-                .background(
-                    if (isSelected) Accent else Color.Black.copy(alpha = 0.3f)
-                )
+                .background(if (isSelected) Accent else Color.Black.copy(alpha = 0.3f))
                 .border(1.5.dp, Color.White, CircleShape),
             contentAlignment = Alignment.Center
         ) {
@@ -419,25 +409,12 @@ private fun MediaListContent(
 
     LaunchedEffect(contentUri) {
         isLoading = true
-        files = withContext(Dispatchers.IO) {
-            queryMediaFiles(contentResolver, contentUri)
-        }
+        files = withContext(Dispatchers.IO) { queryMediaFiles(contentResolver, contentUri) }
         isLoading = false
     }
 
-    if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Loading...", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-        }
-        return
-    }
-
-    if (files.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No files found", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
-        }
-        return
-    }
+    if (isLoading) { CenteredMessage("Loading..."); return }
+    if (files.isEmpty()) { CenteredMessage("No files found"); return }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -476,7 +453,7 @@ private fun ListFileItem(
                 .size(22.dp)
                 .clip(CircleShape)
                 .background(if (isSelected) Accent else Color.Transparent)
-                .border(1.5.dp, if (isSelected) Accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape),
+                .border(1.5.dp, if (isSelected) Accent else TextSecondary.copy(alpha = 0.5f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             if (isSelected) {
@@ -495,13 +472,14 @@ private fun ListFileItem(
             Text(
                 text = file.name,
                 fontSize = 14.sp,
+                color = TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = formatFileSize(file.size),
                 fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                color = TextSecondary
             )
         }
     }
@@ -517,24 +495,26 @@ private fun queryMediaFiles(contentResolver: ContentResolver, contentUri: Uri): 
     )
     val sortOrder = "${MediaStore.MediaColumns.DATE_MODIFIED} DESC"
 
-    contentResolver.query(contentUri, projection, null, null, sortOrder)?.use { cursor ->
-        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
-        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
-        val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
-        val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
+    try {
+        contentResolver.query(contentUri, projection, null, null, sortOrder)?.use { cursor ->
+            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
+            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
+            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
+            val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
 
-        var count = 0
-        while (cursor.moveToNext() && count < 500) {
-            val id = cursor.getLong(idColumn)
-            val name = cursor.getString(nameColumn) ?: continue
-            val size = cursor.getLong(sizeColumn)
-            val dateModified = cursor.getLong(dateColumn)
-            if (size <= 0) continue
+            while (cursor.moveToNext() && files.size < 500) {
+                val id = cursor.getLong(idColumn)
+                val name = cursor.getString(nameColumn) ?: continue
+                val size = cursor.getLong(sizeColumn)
+                val dateModified = cursor.getLong(dateColumn)
+                if (size <= 0) continue
 
-            val uri = ContentUris.withAppendedId(contentUri, id)
-            files.add(DeviceFile(uri = uri, name = name, size = size, dateModified = dateModified))
-            count++
+                val uri = ContentUris.withAppendedId(contentUri, id)
+                files.add(DeviceFile(uri = uri, name = name, size = size, dateModified = dateModified))
+            }
         }
+    } catch (e: SecurityException) {
+        // Missing media permission — return what we have (empty) instead of crashing.
     }
     return files
 }
@@ -543,7 +523,7 @@ private fun formatFileSize(bytes: Long): String {
     return when {
         bytes < 1024 -> "$bytes B"
         bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-        bytes < 1024 * 1024 * 1024 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
-        else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+        bytes < 1024 * 1024 * 1024 -> String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
+        else -> String.format(Locale.US, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
     }
 }

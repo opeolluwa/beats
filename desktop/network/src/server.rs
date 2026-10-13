@@ -2,6 +2,8 @@ use std::net::IpAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use axum::extract::DefaultBodyLimit;
+use axum::http::Method;
 use axum_server::tls_rustls::RustlsConfig;
 use serde::Deserialize;
 use serde::Serialize;
@@ -10,15 +12,12 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::DefaultMakeSpan;
 use tower_http::trace::TraceLayer;
 
-use axum::extract::DefaultBodyLimit;
-use axum::http::Method;
+use kernel::config::KEY_CHAIN_PATH;
+use kernel::config::Ports;
 
 use crate::discovery::PeersMap;
 use crate::errors::ServerError;
 use crate::router;
-
-use kernel::config::Ports;
-use kernel::config::KEY_CHAIN_PATH;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EmbeddedHttpServer;

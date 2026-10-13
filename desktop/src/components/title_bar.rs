@@ -10,13 +10,19 @@ pub fn TitleBar() -> impl leptos::IntoView {
     let state = use_context::<AppState>().expect("AppState context");
 
     let on_close = move |_| {
-        spawn_local(async { window_controls::close_window().await; });
+        spawn_local(async {
+            window_controls::close_window().await;
+        });
     };
     let on_minimize = move |_| {
-        spawn_local(async { window_controls::minimize_window().await; });
+        spawn_local(async {
+            window_controls::minimize_window().await;
+        });
     };
     let on_maximize = move |_| {
-        spawn_local(async { window_controls::toggle_maximize_window().await; });
+        spawn_local(async {
+            window_controls::toggle_maximize_window().await;
+        });
     };
 
     let title_text = move || {

@@ -6,7 +6,6 @@ mod layouts;
 mod routes;
 mod screens;
 mod state;
-
 use app::*;
 
 use leptos::*;

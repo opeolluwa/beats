@@ -55,11 +55,10 @@ async fn upload_files(form_data: FormData) -> bool {
     opts.set_mode(RequestMode::Cors);
     opts.set_body(&form_data);
 
-    let request =
-        match Request::new_with_str_and_init("http://127.0.0.1:18005/api/outbox", &opts) {
-            Ok(r) => r,
-            Err(_) => return false,
-        };
+    let request = match Request::new_with_str_and_init("http://127.0.0.1:18005/api/outbox", &opts) {
+        Ok(r) => r,
+        Err(_) => return false,
+    };
 
     let window = web_sys::window().unwrap();
     match JsFuture::from(window.fetch_with_request(&request)).await {

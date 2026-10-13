@@ -4,12 +4,36 @@ version = "0.5.0"
 edition = "2021"
 
 [workspace]
-members = ["src-tauri", "network", "kernel"]
+members = ["kernel", "network", "src-tauri"]
+
+[workspace.dependencies]
+console_error_panic_hook = "0.1.7"
+js-sys = "0.3"
+kernel = { path = "kernel" }
+leptos = { version = "0.7.0", features = ["csr"] }
+leptos-qr = { git = "https://github.com/opeolluwa/leptos-qr", version = "0.2.0" }
+leptos-use = "0.13.11"
+leptos_router = { version = "0.7.0" }
+leptos_toaster = "0.1.7"
+network = { path = "network" }
+serde = "1"
+serde-wasm-bindgen = "0.6"
+serde_json = "1"
+tauri = "2"
+tauri-build = "2"
+tauri-plugin-os = "2"
+tauri-plugin-shell = "2"
+thaw = { version = "0.4.0-beta-5", features = ["csr"] }
+thiserror = "2.0.12"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = "0.3.77"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
 console_error_panic_hook = { workspace = true }
 js-sys = { workspace = true }
+kernel.workspace = true
 leptos = { workspace = true, features = ["csr"] }
 leptos-qr = { workspace = true }
 leptos-use = { workspace = true }
@@ -34,28 +58,3 @@ web-sys = { workspace = true, features = [
     "File",
     "Blob",
 ] }
-kernel.workspace = true
-
-
-[workspace.dependencies]
-thaw = { version = "0.4.0-beta-5", features = ["csr"] }
-leptos = { version = "0.7.0", features = ["csr"] }
-console_error_panic_hook = "0.1.7"
-js-sys = "0.3"
-serde = "1"
-serde-wasm-bindgen = "0.6"
-serde_json = "1"
-tauri = "2"
-tauri-build = "2"
-tauri-plugin-os = "2"
-tauri-plugin-shell = "2"
-wasm-bindgen = "0.2"
-wasm-bindgen-futures = "0.4"
-leptos_router = { version = "0.7.0" }
-leptos-use = "0.13.11"
-leptos_toaster = "0.1.7"
-web-sys = "0.3.77"
-leptos-qr = { git = "https://github.com/opeolluwa/leptos-qr", version = "0.2.0" }
-network = { path = "network" }
-thiserror = "2.0.12"
-kernel = { path = "kernel" }

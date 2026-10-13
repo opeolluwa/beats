@@ -1,14 +1,16 @@
-use network::discovery::Discovery;
-use network::server::EmbeddedHttpServer;
-use local_ip_address::local_ip;
-use kernel::config::{EmbeddedServerConfig, HTTP_PORT};
-use kernel::state::AppState;
 use std::{
     net::{IpAddr, Ipv4Addr},
     sync::Arc,
 };
+
+use local_ip_address::local_ip;
 use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
+
+use kernel::config::{EmbeddedServerConfig, HTTP_PORT};
+use kernel::state::AppState;
+use network::discovery::Discovery;
+use network::server::EmbeddedHttpServer;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -22,7 +24,6 @@ pub fn run() {
     let local_ip = local_ip().unwrap_or(IpAddr::from(Ipv4Addr::UNSPECIFIED));
     let app_state = AppState {
         server_config: EmbeddedServerConfig::default(),
-
     };
 
     let hostname = hostname::get()

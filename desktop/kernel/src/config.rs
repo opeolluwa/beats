@@ -1,9 +1,10 @@
-use local_ip_address::local_ip;
-use serde::{Deserialize, Serialize};
 use std::{
     fmt::Display,
     net::{IpAddr, Ipv4Addr},
 };
+
+use local_ip_address::local_ip;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EmbeddedServerConfig {

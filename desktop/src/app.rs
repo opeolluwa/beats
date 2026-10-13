@@ -1,5 +1,5 @@
-use leptos::*;
 use leptos::prelude::*;
+use leptos::*;
 use leptos_router::{
     components::{Route, Router, Routes},
     path,
@@ -7,8 +7,8 @@ use leptos_router::{
 use thaw::ConfigProvider;
 
 use crate::screens::welcome::WelcomeScreen;
-use crate::{layouts::default_layout::DefaultLayout, screens::home::HomeScreen};
 use crate::state::AppState;
+use crate::{layouts::default_layout::DefaultLayout, screens::home::HomeScreen};
 
 #[component]
 pub fn App() -> impl leptos::IntoView {

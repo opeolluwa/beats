@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+sea-orm = { version = "2", features = [
+    "macros",
+    "mock",
+    "debug-print",
+    "with-uuid",
+    "with-chrono",
+    "seaography"
+] }
+serde = { version = "1.0.228", features = ["derive"] }
